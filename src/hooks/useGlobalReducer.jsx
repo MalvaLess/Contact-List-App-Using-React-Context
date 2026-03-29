@@ -1,24 +1,52 @@
-// Import necessary hooks and functions from React.
 import { useContext, useReducer, createContext } from "react";
-import storeReducer, { initialStore } from "../store"  // Import the reducer and the initial state.
+import storeReducer, { initialStore, getContacts, createContact, updateContact, createAgenda } from "../store"
 
-// Create a context to hold the global state of the application
-// We will call this global state the "store" to avoid confusion while using local states
 const StoreContext = createContext()
 
-// Define a provider component that encapsulates the store and warps it in a context provider to 
-// broadcast the information throught all the app pages and components.
 export function StoreProvider({ children }) {
-    // Initialize reducer with the initial state.
     const [store, dispatch] = useReducer(storeReducer, initialStore())
-    // Provide the store and dispatch method to all child components.
-    return <StoreContext.Provider value={{ store, dispatch }}>
+
+    const actions = {
+        createAgenda: async () => {
+            return await createAgenda(store.agendaSlug);
+        },
+
+        getContacts: async () => {
+            return await getContacts(dispatch);
+        },
+
+        createContact: async (contact) => {
+            return await createContact(contact, dispatch);
+        },
+
+        updateContact: async (id, contact) => {
+            return await updateContact(id, contact, dispatch);
+        },
+
+        deleteContact: async (id) => {
+            const response = await fetch(
+                `https://playground.4geeks.com/contact/agendas/${store.agendaSlug}/contacts/${id}`,
+                { method: "DELETE" }
+            );
+
+            if (response.ok) {
+                dispatch({
+                    type: "remove_contact",
+                    payload: { id }
+                });
+                return true;
+            }
+
+            return false;
+        }
+    };
+
+    return <StoreContext.Provider value={{ store, dispatch, actions }}>
         {children}
     </StoreContext.Provider>
 }
 
-// Custom hook to access the global state and dispatch function.
 export default function useGlobalReducer() {
-    const { dispatch, store } = useContext(StoreContext)
-    return { dispatch, store };
+    const { dispatch, store, actions } = useContext(StoreContext)
+    return { dispatch, store, actions };
 }
